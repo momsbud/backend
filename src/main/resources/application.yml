@@ -7,11 +7,16 @@ server:
 spring:
   application:
     name: momsbud-backend
+
   datasource:
-    url: ${SPRING_DATASOURCE_URL}
-    username: ${SPRING_DATASOURCE_USERNAME}
-    password: ${SPRING_DATASOURCE_PASSWORD}
+    url: jdbc:postgresql://${POSTGRES_HOST:postgres}:${POSTGRES_PORT:5432}/${POSTGRES_DB:momsbud}
+    username: ${POSTGRES_USER:momsbud}
+    password: ${POSTGRES_PASSWORD:momsbud}
+    driver-class-name: org.postgresql.Driver
+
+
   jpa:
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
     open-in-view: false
     hibernate:
       ddl-auto: validate
@@ -20,9 +25,11 @@ spring:
         jdbc.time_zone: UTC
         format_sql: true
         show_sql: false
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+
   redis:
-    host: ${SPRING_REDIS_HOST}
-    port: ${SPRING_REDIS_PORT}
+    host: ${SPRING_REDIS_HOST:redis}
+    port: ${SPRING_REDIS_PORT:6379}
 
 management:
   endpoints:
@@ -33,3 +40,22 @@ management:
     health:
       probes:
         enabled: true
+
+app:
+  otp:
+    pepper: ${OTP_PEPPER:}
+    length: 6
+    ttl-seconds: 300     # 5 min
+    max-attempts: 5
+    send-rate:
+      per-ip-per-min: 5
+      per-phone-per-hour: 6
+
+  security:
+    jwt:
+      secret: ${JWT_SECRET}
+      issuer: ${JWT_ISSUER:momsbud}
+      ttl-minutes: ${JWT_TTL_MINUTES:1440}
+
+    revocation:
+      enabled: true
