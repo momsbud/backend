@@ -6,11 +6,12 @@ import com.momsbud.backend.auth.dto.OtpVerifyRequest;
 import com.momsbud.backend.auth.dto.OtpVerifyResponse;
 import com.momsbud.backend.auth.service.AuthSessionService;
 import com.momsbud.backend.auth.service.OtpService;
+import jakarta.annotation.security.PermitAll;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
 import org.springframework.security.core.Authentication;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/auth")
@@ -20,21 +21,18 @@ public class AuthController {
     private final OtpService otpService;
     private final AuthSessionService authSessionService;
 
+    @PermitAll
     @PostMapping("/otp/send")
-    public ResponseEntity<OtpSendResponse> send(
-            @RequestBody OtpSendRequest req,
-            HttpServletRequest http
-    ) {
+    public ResponseEntity<OtpSendResponse> send(@RequestBody OtpSendRequest req, HttpServletRequest http) {
         return ResponseEntity.ok(otpService.send(req, http));
     }
 
+    @PermitAll
     @PostMapping("/otp/verify")
-    public ResponseEntity<OtpVerifyResponse> verify(
-            @RequestBody OtpVerifyRequest req,
-            HttpServletRequest http
-    ) {
+    public ResponseEntity<OtpVerifyResponse> verify(@RequestBody OtpVerifyRequest req, HttpServletRequest http) {
         return ResponseEntity.ok(otpService.verify(req, http));
     }
+
     /** Revoke current token's session (based on Authorization: Bearer <jwt>) */
     @PostMapping("/logout")
     public ResponseEntity<Void> logout(HttpServletRequest request) {

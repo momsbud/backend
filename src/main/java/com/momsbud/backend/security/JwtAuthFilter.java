@@ -24,10 +24,6 @@ public class JwtAuthFilter extends OncePerRequestFilter {
     private final JwtService jwt;
     private static final AntPathMatcher PATH = new AntPathMatcher();
 
-    /**
-     * Completely bypass the JWT filter for public endpoints.
-     * This prevents /auth/** from hitting AuthorizationFilter with an empty context and getting 403’ed.
-     */
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
         String p = request.getServletPath();
@@ -44,32 +40,31 @@ public class JwtAuthFilter extends OncePerRequestFilter {
 
         String header = req.getHeader(HttpHeaders.AUTHORIZATION);
 
-        // No token? Don't block. Let security rules decide (protected routes will 401 later).
+        // Missing bearer → don't block; app chain will 401 for protected routes
         if (!StringUtils.hasText(header) || !header.startsWith("Bearer ")) {
             chain.doFilter(req, res);
             return;
         }
 
         String token = header.substring(7).trim();
-
         try {
-            Jws<Claims> jws = jwt.parse(token);   // throws if invalid/expired
+            Jws<Claims> jws = jwt.parse(token); // validates signature, issuer, exp
             Claims c = jws.getPayload();
 
-            String userId = c.getSubject();                // sub
-            String userType = String.valueOf(c.get("ut")); // your "CUSTOMER"/"DOCTOR" etc.
+            String userId = c.getSubject();
+            String userType = String.valueOf(c.get("ut")); // e.g., CUSTOMER, DOCTOR
 
             var auth = new UsernamePasswordAuthenticationToken(
                     userId,
                     null,
-                    List.of(new SimpleGrantedAuthority("ROLE_" + userType)) // aligns with hasRole('CUSTOMER')
+                    List.of(new SimpleGrantedAuthority("ROLE_" + userType))
             );
 
             SecurityContextHolder.getContext().setAuthentication(auth);
             chain.doFilter(req, res);
 
         } catch (Exception e) {
-            // Invalid token -> return 401 (clear signal), not 403
+            // Bad token → 401, not 403
             res.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
             res.setContentType("application/json");
             res.getWriter().write("{\"error\":\"Invalid or expired token\"}");

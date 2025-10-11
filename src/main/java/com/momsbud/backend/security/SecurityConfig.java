@@ -1,56 +1,74 @@
 package com.momsbud.backend.security;
 
-import com.momsbud.backend.coreidentity.repo.UserSessionRepository;
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.annotation.Order;
 import org.springframework.security.config.Customizer;
-import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
-import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
 @Configuration
 @EnableWebSecurity
 @RequiredArgsConstructor
 public class SecurityConfig {
 
-    private final JwtService jwtService;
-    private final UserSessionRepository userSessionRepository;
+    private final JwtAuthFilter jwtAuthFilter;
+    private final JtiRevocationFilter jtiRevocationFilter;
 
-    // Define JwtAuthFilter as a bean
+    // Chain 0: PUBLIC endpoints only — cannot be 403 by auth filters
     @Bean
-    public JwtAuthFilter jwtAuthFilter() {
-        return new JwtAuthFilter(jwtService);
+    @Order(0)
+    SecurityFilterChain publicChain(org.springframework.security.config.annotation.web.builders.HttpSecurity http) throws Exception {
+        http
+                .securityMatcher("/auth/**", "/actuator/**", "/swagger-ui/**", "/v3/api-docs/**", "/swagger-ui.html")
+                .csrf(csrf -> csrf.disable())
+                .cors(Customizer.withDefaults())
+                .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .authorizeHttpRequests(a -> a.anyRequest().permitAll())
+                .exceptionHandling(ex -> ex
+                        .authenticationEntryPoint((req, res, e) -> {
+                            res.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                            res.setContentType("application/json");
+                            res.getWriter().write("{\"error\":\"Unauthorized\"}");
+                        })
+                        .accessDeniedHandler((req, res, e) -> {
+                            res.setStatus(HttpServletResponse.SC_FORBIDDEN);
+                            res.setContentType("application/json");
+                            res.getWriter().write("{\"error\":\"Forbidden\"}");
+                        })
+                );
+        return http.build();
     }
 
-    // (Optional) Define JTI guard as a bean too; or you can new() it in filterChain
+    // Chain 1: everything else — JWT protected
     @Bean
-    public JtiRevocationFilter jtiRevocationFilter() {
-        return new JtiRevocationFilter(jwtService, userSessionRepository);
-    }
-
-    @Bean
-    public SecurityFilterChain filterChain(
-            HttpSecurity http,
-            JwtAuthFilter jwtAuthFilter,           // injected bean
-            JtiRevocationFilter jtiRevocationFilter // injected bean
-    ) throws Exception {
+    @Order(1)
+    SecurityFilterChain appChain(org.springframework.security.config.annotation.web.builders.HttpSecurity http) throws Exception {
         http
                 .csrf(csrf -> csrf.disable())
+                .cors(Customizer.withDefaults())
                 .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                .authorizeHttpRequests(auth -> auth
-                        .requestMatchers(
-                                "/actuator/**",
-                                "/auth/**",
-                                "/swagger-ui/**",
-                                "/v3/api-docs/**",
-                                "/swagger-ui.html"
-                        ).permitAll()
+                .authorizeHttpRequests(a -> a
+                        .requestMatchers("/swagger-ui/**", "/v3/api-docs/**", "/swagger-ui.html", "/actuator/**").permitAll()
                         .anyRequest().authenticated()
                 )
-                .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class)
+                .exceptionHandling(ex -> ex
+                        .authenticationEntryPoint((req, res, e) -> {
+                            res.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                            res.setContentType("application/json");
+                            res.getWriter().write("{\"error\":\"Unauthorized\"}");
+                        })
+                        .accessDeniedHandler((req, res, e) -> {
+                            res.setStatus(HttpServletResponse.SC_FORBIDDEN);
+                            res.setContentType("application/json");
+                            res.getWriter().write("{\"error\":\"Forbidden\"}");
+                        })
+                )
+                // filters — JWT first, then JTI check
+                .addFilterBefore(jwtAuthFilter, org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter.class)
                 .addFilterAfter(jtiRevocationFilter, JwtAuthFilter.class);
 
         return http.build();
