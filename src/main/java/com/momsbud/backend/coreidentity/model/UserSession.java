@@ -32,5 +32,13 @@ public class UserSession extends BaseEntity {
     private String userAgent;
 
     @Column(name = "revoked_at")
+
     private OffsetDateTime revokedAt;
+    @Column(nullable = false)
+    private OffsetDateTime issuedAt;
+
+    private OffsetDateTime expiresAt;
+
+    @Column(nullable = false)
+    private boolean revoked = false;
 }
