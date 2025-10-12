@@ -3,7 +3,9 @@ package com.momsbud.backend.coreidentity.model;
 import com.momsbud.backend.shared.jpa.BaseEntity;
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.JdbcType;
 import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.dialect.PostgreSQLEnumJdbcType;
 import org.hibernate.type.SqlTypes;
 
 import java.time.OffsetDateTime;
@@ -19,7 +21,8 @@ public class User extends BaseEntity {
     private String email; // DB type is CITEXT
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "user_type", nullable = false)
+    @JdbcType(PostgreSQLEnumJdbcType.class)
+    @Column(name = "user_type", nullable = false, columnDefinition = "user_type")
     private UserType userType = UserType.CUSTOMER;
 
     @Column(nullable = false)

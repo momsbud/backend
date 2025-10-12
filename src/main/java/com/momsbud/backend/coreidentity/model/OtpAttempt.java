@@ -2,6 +2,8 @@ package com.momsbud.backend.coreidentity.model;
 
 import com.momsbud.backend.shared.jpa.BaseEntity;
 import jakarta.persistence.*;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 import lombok.*;
 import java.time.OffsetDateTime;
 
@@ -19,13 +21,15 @@ public class OtpAttempt extends BaseEntity {
     private String codeHash;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "state", nullable = false)
+    @JdbcTypeCode(SqlTypes.NAMED_ENUM)
+    @Column(name = "state", nullable = false, columnDefinition = "otp_state")
     private OtpState state = OtpState.SENT;
 
     @Column(name = "expires_at", nullable = false)
     private OffsetDateTime expiresAt;
 
     @Column(name = "ip", columnDefinition = "inet")
+    @JdbcTypeCode(SqlTypes.INET)
     private String ip;                   // map inet as String
 
     @Column(name = "device_fingerprint")

@@ -5,6 +5,7 @@ import com.momsbud.backend.auth.dto.OtpSendResponse;
 import com.momsbud.backend.auth.dto.OtpVerifyRequest;
 import com.momsbud.backend.auth.dto.OtpVerifyResponse;
 import com.momsbud.backend.auth.service.OtpService;
+import com.momsbud.backend.auth.service.SmsProvider;
 import com.momsbud.backend.auth.util.OtpUtil;
 import com.momsbud.backend.coreidentity.model.OtpAttempt;
 import com.momsbud.backend.coreidentity.model.OtpState;
@@ -31,35 +32,63 @@ public class OtpServiceImpl implements OtpService {
     private final UserRepository userRepo;
     private final UserSessionRepository sessionRepo;
     private final JwtService jwt;
+    private final SmsProviderFactory smsProviderFactory;
 
     @Value("${app.otp.length:6}") private int otpLength;
     @Value("${app.otp.ttl-seconds:300}") private long otpTtlSeconds;
     @Value("${app.otp.max-attempts:5}") private int maxAttempts;           // reserved for future use
-    @Value("${app.security.otp.pepper:}") private String otpPepper;
+    @Value("${app.otp.pepper:}") private String otpPepper;
+    @Value("${app.otp.send-rate.per-ip-per-min:5}") private int maxPerIpPerMin;
+    @Value("${app.otp.send-rate.per-phone-per-hour:6}") private int maxPerPhonePerHour;
 
     @Override
     @Transactional
     public OtpSendResponse send(OtpSendRequest req, HttpServletRequest http) {
         String ip = clientIp(http);
         String phone = OtpUtil.normalizePhone(req.getPhone());
+        if (phone == null || phone.isBlank()) {
+            throw new BadRequest("Phone is required");
+        }
 
+        // Rate limiting: check IP-based rate (per minute)
+        OffsetDateTime oneMinuteAgo = OffsetDateTime.now().minusMinutes(1);
+        long ipRequestsLastMinute = otpRepo.countByIpAndCreatedAtAfter(ip, oneMinuteAgo);
+        if (ipRequestsLastMinute >= maxPerIpPerMin) {
+            throw new BadRequest("Too many requests from this IP. Please try again later.");
+        }
+
+        // Rate limiting: check phone-based rate (per hour)
+        OffsetDateTime oneHourAgo = OffsetDateTime.now().minusHours(1);
+        long phoneRequestsLastHour = otpRepo.countByPhoneAndCreatedAtAfter(phone, oneHourAgo);
+        if (phoneRequestsLastHour >= maxPerPhonePerHour) {
+            throw new BadRequest("Too many OTP requests for this phone number. Please try again later.");
+        }
+
+        // Generate numeric OTP and store only the hash
         String code = OtpUtil.numericCode(otpLength);
-        String codeHash = OtpUtil.hash(code, otpPepper);
+        String hash = OtpUtil.hash(code, otpPepper);
 
-        var attempt = OtpAttempt.builder()
+        OffsetDateTime expiresAt = OffsetDateTime.now().plusSeconds(otpTtlSeconds);
+
+        OtpAttempt attempt = OtpAttempt.builder()
                 .phone(phone)
+                .codeHash(hash)
                 .state(OtpState.SENT)
-                .expiresAt(OffsetDateTime.now().plusSeconds(otpTtlSeconds))
+                .expiresAt(expiresAt)
                 .ip(ip)
                 .deviceFingerprint(req.getDeviceFingerprint())
                 .build();
 
-        // Persist hashed code (field exists in your entity)
-        attempt.setCodeHash(codeHash);
-        otpRepo.save(attempt);
+        attempt = otpRepo.save(attempt);
 
-        // DEV ONLY: print OTP to logs (replace with Outbox later)
-        System.out.println("[DEV][OTP] phone=" + phone + " code=" + code + " attemptId=" + attempt.getId());
+        // Send OTP via configured SMS provider
+        SmsProvider smsProvider = smsProviderFactory.getProvider();
+        boolean sent = smsProvider.sendOtp(phone, code, otpTtlSeconds);
+        
+        if (!sent) {
+            // Log failure but don't throw exception - user can still verify with code from logs in dev
+            System.out.printf("WARNING: Failed to send OTP to %s\n", phone);
+        }
 
         return new OtpSendResponse(attempt.getId(), otpTtlSeconds);
     }

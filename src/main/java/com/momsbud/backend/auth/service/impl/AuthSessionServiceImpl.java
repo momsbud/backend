@@ -44,8 +44,7 @@ public class AuthSessionServiceImpl implements AuthSessionService {
         if (opt.isEmpty()) return;
 
         UserSession s = opt.get();
-        if (s.getRevokedAt() == null && !s.isRevoked()) {
-            s.setRevoked(true);
+        if (s.getRevokedAt() == null) {
             s.setRevokedAt(OffsetDateTime.now());
             sessionRepository.save(s);
         }
@@ -60,7 +59,6 @@ public class AuthSessionServiceImpl implements AuthSessionService {
 
         OffsetDateTime now = OffsetDateTime.now();
         for (UserSession s : active) {
-            s.setRevoked(true);
             s.setRevokedAt(now);
         }
         sessionRepository.saveAll(active);

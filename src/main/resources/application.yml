@@ -3,6 +3,11 @@ server:
   servlet:
     context-path: /
   forward-headers-strategy: framework
+  error:
+    include-message: always
+    include-binding-errors: always
+    include-exception: true
+    include-stacktrace: always
 
 spring:
   application:
@@ -24,7 +29,7 @@ spring:
       hibernate:
         jdbc.time_zone: UTC
         format_sql: true
-        show_sql: false
+        show_sql: true
         dialect: org.hibernate.dialect.PostgreSQLDialect
 
   redis:
@@ -41,6 +46,7 @@ management:
       probes:
         enabled: true
 
+
 app:
   otp:
     pepper: ${OTP_PEPPER:}
@@ -50,6 +56,21 @@ app:
     send-rate:
       per-ip-per-min: 5
       per-phone-per-hour: 6
+      
+  sms:
+    provider: ${SMS_PROVIDER:log}  # Options: log, twilio
+    
+    # Log provider config (for development)
+    log:
+      enabled: true
+      message-template: "Your OTP code is: {code}. It expires in {ttl} minutes."
+    
+    # Twilio provider config
+    twilio:
+      account-sid: ${TWILIO_ACCOUNT_SID:}
+      auth-token: ${TWILIO_AUTH_TOKEN:}
+      from-number: ${TWILIO_FROM_NUMBER:}
+      message-template: "Your OTP code is: {code}. It expires in {ttl} minutes."
 
   security:
     jwt:

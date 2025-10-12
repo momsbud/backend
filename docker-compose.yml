@@ -51,6 +51,7 @@ services:
       JWT_SECRET: ${JWT_SECRET}
       JWT_ISSUER: ${JWT_ISSUER}
       TZ: ${TZ}
+      OTP_PEPPER: dev-pepper-123
     ports:
       - "0.0.0.0:${APP_PORT}:8080"
     healthcheck:

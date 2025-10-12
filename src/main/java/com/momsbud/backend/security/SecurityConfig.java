@@ -18,41 +18,28 @@ public class SecurityConfig {
     private final JwtAuthFilter jwtAuthFilter;
     private final JtiRevocationFilter jtiRevocationFilter;
 
-    // Chain 0: PUBLIC endpoints only — cannot be 403 by auth filters
-    @Bean
-    @Order(0)
-    SecurityFilterChain publicChain(org.springframework.security.config.annotation.web.builders.HttpSecurity http) throws Exception {
-        http
-                .securityMatcher("/auth/**", "/actuator/**", "/swagger-ui/**", "/v3/api-docs/**", "/swagger-ui.html")
-                .csrf(csrf -> csrf.disable())
-                .cors(Customizer.withDefaults())
-                .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                .authorizeHttpRequests(a -> a.anyRequest().permitAll())
-                .exceptionHandling(ex -> ex
-                        .authenticationEntryPoint((req, res, e) -> {
-                            res.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-                            res.setContentType("application/json");
-                            res.getWriter().write("{\"error\":\"Unauthorized\"}");
-                        })
-                        .accessDeniedHandler((req, res, e) -> {
-                            res.setStatus(HttpServletResponse.SC_FORBIDDEN);
-                            res.setContentType("application/json");
-                            res.getWriter().write("{\"error\":\"Forbidden\"}");
-                        })
-                );
-        return http.build();
-    }
+    // Single chain — permits public endpoints and protects everything else
 
     // Chain 1: everything else — JWT protected
     @Bean
-    @Order(1)
+    @Order(0)
     SecurityFilterChain appChain(org.springframework.security.config.annotation.web.builders.HttpSecurity http) throws Exception {
         http
                 .csrf(csrf -> csrf.disable())
                 .cors(Customizer.withDefaults())
                 .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(a -> a
+                        // Allow internal error dispatches and forwards without auth
+                        .dispatcherTypeMatchers(jakarta.servlet.DispatcherType.ERROR, jakarta.servlet.DispatcherType.FORWARD).permitAll()
                         .requestMatchers("/swagger-ui/**", "/v3/api-docs/**", "/swagger-ui.html", "/actuator/**").permitAll()
+                        .requestMatchers("/error").permitAll()
+                        // Explicitly permit all methods for /auth/** to avoid method-specific mismatches
+                        .requestMatchers(org.springframework.http.HttpMethod.GET, "/auth/**").permitAll()
+                        .requestMatchers(org.springframework.http.HttpMethod.POST, "/auth/**").permitAll()
+                        .requestMatchers(org.springframework.http.HttpMethod.PUT, "/auth/**").permitAll()
+                        .requestMatchers(org.springframework.http.HttpMethod.DELETE, "/auth/**").permitAll()
+                        .requestMatchers(org.springframework.http.HttpMethod.OPTIONS, "/auth/**").permitAll()
+                        .requestMatchers(org.springframework.http.HttpMethod.PATCH, "/auth/**").permitAll()
                         .anyRequest().authenticated()
                 )
                 .exceptionHandling(ex -> ex

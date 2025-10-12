@@ -23,9 +23,16 @@ public class AuthController {
 
     @PermitAll
     @PostMapping("/otp/send")
-    public ResponseEntity<OtpSendResponse> send(@RequestBody OtpSendRequest req, HttpServletRequest http) {
-        return ResponseEntity.ok(otpService.send(req, http));
+    public ResponseEntity<?> send(@RequestBody OtpSendRequest req, HttpServletRequest http) {
+        try {
+            return ResponseEntity.ok(otpService.send(req, http));
+        } catch (Exception e) {
+            String msg = (e.getMessage() != null) ? e.getMessage() : e.getClass().getSimpleName();
+            return ResponseEntity.status(500).body(new Problem("internal_error", msg));
+        }
     }
+
+    record Problem(String code, String message) {}
 
     @PermitAll
     @PostMapping("/otp/verify")

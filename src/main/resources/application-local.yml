@@ -1,0 +1,30 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:${POSTGRES_PORT:5432}/${POSTGRES_DB:momsbud}
+    username: ${POSTGRES_USER:momsbud}
+    password: ${POSTGRES_PASSWORD:momsbud}
+  redis:
+    host: ${SPRING_REDIS_HOST:localhost}
+    port: ${SPRING_REDIS_PORT:6379}
+
+app:
+  otp:
+    length: 6
+    ttl-seconds: 300
+    max-attempts: 5
+    send-rate:
+      per-ip-per-min: 30
+      per-phone-per-hour: 60
+    pepper: ${OTP_PEPPER:dev-pepper-123}  # good default for local
+
+  security:
+    jwt:
+      secret: ${JWT_SECRET}               # reuse your strong base64 secret
+      issuer: ${JWT_ISSUER:momsbud}
+      ttl-minutes: ${JWT_TTL_MINUTES:1440}
+
+  sms:
+    provider: ${APP_SMS_PROVIDER:log}
+    log:
+      to-stdout: true
+      mask: false

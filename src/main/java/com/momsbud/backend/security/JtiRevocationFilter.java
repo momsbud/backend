@@ -11,7 +11,6 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
-import java.time.OffsetDateTime;
 import java.util.UUID;
 
 @RequiredArgsConstructor
@@ -45,19 +44,11 @@ public class JtiRevocationFilter extends OncePerRequestFilter {
                         return;
                     }
 
-                    // If session is revoked -> 401
-                    if (sessionRepo.existsByJtiAndRevokedTrue(jti)) {
+                    // If session does not exist or is revoked -> 401
+                    if (!sessionRepo.existsByJtiAndRevokedAtIsNull(jti)) {
                         res.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
                         res.setContentType("application/json");
                         res.getWriter().write("{\"error\":\"Session revoked\"}");
-                        return;
-                    }
-
-                    // Optional: DB-side expiry check if you store expiresAt
-                    if (sessionRepo.isExpired(jti, OffsetDateTime.now())) {
-                        res.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-                        res.setContentType("application/json");
-                        res.getWriter().write("{\"error\":\"Session expired\"}");
                         return;
                     }
                 }
