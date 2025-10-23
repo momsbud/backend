@@ -29,7 +29,7 @@ spring:
       hibernate:
         jdbc.time_zone: UTC
         format_sql: true
-        show_sql: true
+        show_sql: false
         dialect: org.hibernate.dialect.PostgreSQLDialect
 
   redis:
