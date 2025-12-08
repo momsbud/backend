@@ -45,4 +45,14 @@ public class Habit extends BaseEntity {
     @Column(name = "active", nullable = false)
     private boolean active = true;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "habit_type", nullable = false, length = 32)
+    private HabitType habitType = HabitType.GENERIC;
+
+    // persisted as Postgres text[]
+    @Column(name = "tags", columnDefinition = "text[]")
+    private String[] tags;
+
+
+
 }

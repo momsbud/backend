@@ -1,23 +1,25 @@
 -- 003_habits.sql (no enums)
 
 CREATE TABLE IF NOT EXISTS habit (
-  id           varchar(26) PRIMARY KEY,
-  user_id      varchar(26) NOT NULL REFERENCES users(id),
-  title        varchar(120) NOT NULL,
-  description  varchar(500),
-  frequency    varchar(16) NOT NULL DEFAULT 'DAILY',  -- DAILY | WEEKLY (code-level enum)
-  days_of_week int[] NULL,                             -- 0=Sun..6=Sat
-  time_of_day  time with time zone NULL,
-  timezone     varchar(64) NULL,
-  active       boolean NOT NULL DEFAULT true,
-
-  metadata     jsonb NOT NULL DEFAULT '{}'::jsonb,
-  created_at   timestamptz NOT NULL DEFAULT now(),
-  updated_at   timestamptz NOT NULL DEFAULT now(),
-  created_by   varchar(26),
-  updated_by   varchar(26),
-  is_deleted   boolean NOT NULL DEFAULT false
+    id           varchar(26) PRIMARY KEY,
+    user_id      varchar(26) NOT NULL REFERENCES users(id),
+    title        varchar(120) NOT NULL,
+    description  varchar(500),
+    frequency    varchar(16) NOT NULL DEFAULT 'DAILY',
+    days_of_week int[] NULL,
+    time_of_day  time with time zone NULL,
+    timezone     varchar(64) NULL,
+    active       boolean NOT NULL DEFAULT true,
+    habit_type   varchar(32) NOT NULL DEFAULT 'GENERIC',
+    tags         text[] NULL,
+    metadata     jsonb NOT NULL DEFAULT '{}'::jsonb,
+    created_at   timestamptz NOT NULL DEFAULT now(),
+    updated_at   timestamptz NOT NULL DEFAULT now(),
+    created_by   varchar(100),
+    updated_by   varchar(100),
+    is_deleted   boolean NOT NULL DEFAULT false
 );
+
 CREATE INDEX IF NOT EXISTS habit_user_active_idx
   ON habit (user_id) WHERE active = true AND is_deleted = false;
 
