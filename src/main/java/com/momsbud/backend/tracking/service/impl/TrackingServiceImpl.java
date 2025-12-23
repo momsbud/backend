@@ -26,6 +26,10 @@ public class TrackingServiceImpl implements TrackingService {
     private final MetricTypeRepository typeRepo;
     private final UserMetricRepository metricRepo;
 
+    @Override
+    public List<MetricTypeResponse> listMetricTypes() {
+        return listTypes();
+    }
     // ----------------------------------------------------------------------
     // METRIC TYPE – READ (for app users, enabled only)
     // ----------------------------------------------------------------------
@@ -46,7 +50,7 @@ public class TrackingServiceImpl implements TrackingService {
      */
     public MetricTypeResponse createMetricType(MetricTypeUpsertRequest req) {
         Objects.requireNonNull(req.getCode(), "code is required");
-        Objects.requireNonNull(req.getLabel(), "label is required");
+        Objects.requireNonNull(req.getName(), "label is required");
         Objects.requireNonNull(req.getUnit(), "unit is required");
 
         typeRepo.findByCodeAndIsDeletedFalse(req.getCode())
@@ -56,7 +60,7 @@ public class TrackingServiceImpl implements TrackingService {
 
         MetricType mt = MetricType.builder()
                 .code(req.getCode().trim().toLowerCase())
-                .label(req.getLabel().trim())
+                .label(req.getName().trim())
                 .unit(req.getUnit().trim())
                 .enabled(req.isEnabled())
                 .build();
@@ -72,8 +76,8 @@ public class TrackingServiceImpl implements TrackingService {
         MetricType mt = typeRepo.findByCodeAndIsDeletedFalse(code)
                 .orElseThrow(() -> new NoSuchElementException("Metric type not found: " + code));
 
-        if (req.getLabel() != null && !req.getLabel().isBlank()) {
-            mt.setLabel(req.getLabel().trim());
+        if (req.getName() != null && !req.getName().isBlank()) {
+            mt.setLabel(req.getName().trim());
         }
         if (req.getUnit() != null && !req.getUnit().isBlank()) {
             mt.setUnit(req.getUnit().trim());
@@ -194,7 +198,7 @@ public class TrackingServiceImpl implements TrackingService {
         return MetricTypeResponse.builder()
                 .id(t.getId())
                 .code(t.getCode())
-                .label(t.getLabel())
+                .name(t.getLabel())
                 .unit(t.getUnit())
                 .enabled(t.isEnabled())
                 .build();

@@ -1,4 +1,4 @@
-package com.momsbud.backend.coreidentity.web;
+package com.momsbud.backend.coreidentity.controller;
 
 import com.momsbud.backend.coreidentity.dto.UserMeResponse;
 import com.momsbud.backend.coreidentity.service.UserQueryService;
