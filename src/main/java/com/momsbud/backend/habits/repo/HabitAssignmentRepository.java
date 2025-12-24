@@ -24,4 +24,5 @@ public interface HabitAssignmentRepository extends JpaRepository<HabitAssignment
         order by ha.assigned_from desc
         """, nativeQuery = true)
     List<HabitAssignmentEntity> findActiveByUserId(String userId);
+    long countByUserIdAndStatusAndIsDeletedFalse(String userId, String status);
 }

@@ -28,3 +28,7 @@ app:
     log:
       to-stdout: true
       mask: false
+momsbud:
+  dev:
+    endpoints:
+      enabled: true

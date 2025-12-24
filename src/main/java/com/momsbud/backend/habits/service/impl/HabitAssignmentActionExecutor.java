@@ -16,8 +16,8 @@ import java.time.ZoneOffset;
 import java.util.*;
 
 @Slf4j
-@Component
 @RequiredArgsConstructor
+@Component("habitAssignmentActionExecutor")
 public class HabitAssignmentActionExecutor implements ActionExecutor {
 
     private final HabitAssignmentRepository assignmentRepo;
