@@ -5,6 +5,7 @@ import com.momsbud.backend.coreidentity.repo.UserProfileRepository;
 import com.momsbud.backend.habits.model.HabitRule;
 import com.momsbud.backend.habits.repo.HabitAssignmentRepository;
 import com.momsbud.backend.habits.repo.HabitRuleRepository;
+import com.momsbud.backend.habits.service.HabitAssignmentCleanupService;
 import com.momsbud.backend.habits.service.HabitAssignmentRefreshService;
 import com.momsbud.backend.rules.engine.RuleEngine;
 import com.momsbud.backend.rules.model.Rule;
@@ -26,6 +27,7 @@ public class HabitAssignmentRefreshServiceImpl implements HabitAssignmentRefresh
     private final UserProfileRepository userProfileRepository;
     private final HabitRuleRepository habitRuleRepository;
     private final HabitAssignmentRepository habitAssignmentRepository;
+    private final HabitAssignmentCleanupService cleanupService;
     private final ObjectMapper objectMapper;
 
     @Qualifier("habitAssignmentActionExecutor")
@@ -35,20 +37,43 @@ public class HabitAssignmentRefreshServiceImpl implements HabitAssignmentRefresh
 
     @Override
     public RefreshResult refreshForUser(String userId, String lob) {
+
+        // 1️⃣ End expired assignments first (time-based cleanup)
+        cleanupService.cleanupExpiredAssignments();
+
+        // 2️⃣ Load user profile
         var profile = userProfileRepository.findByUserId(userId)
-                .orElseThrow(() -> new IllegalStateException("UserProfile not found for userId=" + userId));
+                .orElseThrow(() -> new IllegalStateException(
+                        "UserProfile not found for userId=" + userId));
 
         Map<String, Object> metadata = profile.getMetadata();
 
+        // 3️⃣ Load active rules
         OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
         List<HabitRule> dbRules = habitRuleRepository.findActiveForLobNow(lob, now);
 
-        List<Rule> engineRules = dbRules.stream().map(this::toEngineRule).toList();
+        // 4️⃣ Convert to engine rules
+        List<Rule> engineRules = dbRules.stream()
+                .map(this::toEngineRule)
+                .toList();
+
+        // 5️⃣ Evaluate rules
         List<Rule> matched = ruleEngine.evaluate(metadata, engineRules);
 
+        // 🔥 6️⃣ NEW: cleanup rule-mismatch assignments
+        cleanupService.cleanupRuleMismatchAssignments(
+                userId,
+                metadata,
+                matched
+        );
+
+        // 7️⃣ Assign new habits
         habitAssignmentActionExecutor.execute(userId, metadata, matched);
 
-        long activeAssignments = habitAssignmentRepository.countByUserIdAndStatusAndIsDeletedFalse(userId, "ACTIVE");
+        // 8️⃣ Return summary
+        long activeAssignments =
+                habitAssignmentRepository.countByUserIdAndStatusAndIsDeletedFalse(
+                        userId, "ACTIVE");
 
         return RefreshResult.builder()
                 .userId(userId)
