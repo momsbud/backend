@@ -45,7 +45,7 @@ public class HabitController {
         return ResponseEntity.noContent().build();
     }
 
-    @GetMapping("/today")
+    @GetMapping("/v1/today")
     public List<TodayHabitItem> today(Authentication auth) {
         String userId = (String) auth.getPrincipal();
         return service.today(userId);
