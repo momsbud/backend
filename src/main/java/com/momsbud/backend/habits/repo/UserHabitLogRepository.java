@@ -10,4 +10,5 @@ import java.util.Optional;
 public interface UserHabitLogRepository extends JpaRepository<UserHabitLog, String> {
     Optional<UserHabitLog> findByHabitIdAndUserIdAndLogDateAndIsDeletedFalse(String habitId, String userId, LocalDate logDate);
     List<UserHabitLog> findAllByUserIdAndLogDateAndIsDeletedFalse(String userId, LocalDate logDate);
+    List<UserHabitLog> findAllByUserIdAndLogDateBetweenAndIsDeletedFalse(String userId, LocalDate start, LocalDate end);
 }

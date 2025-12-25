@@ -2,11 +2,14 @@ package com.momsbud.backend.habits.controller;
 
 import com.momsbud.backend.habits.dto.*;
 import com.momsbud.backend.habits.service.HabitService;
+import com.momsbud.backend.habits.service.HabitSummaryService;
+import com.momsbud.backend.security.CurrentUser;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDate;
 import java.util.List;
 
 @RestController
@@ -15,6 +18,7 @@ import java.util.List;
 public class HabitController {
 
     private final HabitService service;
+    private final HabitSummaryService habitSummaryService;
 
     @PostMapping
     public HabitResponse create(@RequestBody CreateHabitRequest req, Authentication auth) {
@@ -49,5 +53,13 @@ public class HabitController {
     public List<TodayHabitItem> today(Authentication auth) {
         String userId = (String) auth.getPrincipal();
         return service.today(userId);
+    }
+
+    @GetMapping("/summary/week")
+    public WeeklyHabitSummaryResponse weekSummary(
+            @CurrentUser String userId,
+            @RequestParam(name = "weekStart", required = false) LocalDate weekStart
+    ) {
+        return habitSummaryService.getWeeklySummary(userId, weekStart);
     }
 }
