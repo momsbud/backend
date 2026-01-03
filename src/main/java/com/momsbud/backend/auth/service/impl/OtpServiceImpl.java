@@ -15,6 +15,9 @@ import com.momsbud.backend.coreidentity.repo.OtpAttemptRepository;
 import com.momsbud.backend.coreidentity.repo.UserRepository;
 import com.momsbud.backend.coreidentity.repo.UserSessionRepository;
 import com.momsbud.backend.security.JwtService;
+import com.momsbud.backend.coreidentity.model.UserProfile;
+import com.momsbud.backend.coreidentity.repo.UserProfileRepository;
+import com.momsbud.backend.coreidentity.service.OnboardingService;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
@@ -33,6 +36,9 @@ public class OtpServiceImpl implements OtpService {
     private final UserSessionRepository sessionRepo;
     private final JwtService jwt;
     private final SmsProviderFactory smsProviderFactory;
+    private final UserProfileRepository userProfileRepo;
+    private final OnboardingService onboardingService;
+
 
     @Value("${app.otp.length:6}") private int otpLength;
     @Value("${app.otp.ttl-seconds:300}") private long otpTtlSeconds;
@@ -129,6 +135,13 @@ public class OtpServiceImpl implements OtpService {
             return userRepo.save(u);
         });
 
+        // CREATE PROFILE ROW IF MISSING (PUT THIS HERE)
+        userProfileRepo.findByUserId(user.getId()).orElseGet(() -> {
+            UserProfile p = new UserProfile();
+            p.setUserId(user.getId());
+            return userProfileRepo.save(p);
+        });
+
         // Create session (JTI)
         UUID jti = UUID.randomUUID();
         var session = UserSession.builder()
@@ -143,8 +156,9 @@ public class OtpServiceImpl implements OtpService {
         // Issue JWT (your JwtService already supports subject=userId, id=jti, claim "ut")
         String userType = (user.getUserType() != null) ? user.getUserType().name() : "USER";
         String token = jwt.issue(user.getId(), userType, jti.toString(),1440L);
+        var onboarding = onboardingService.evaluate(user.getId());
 
-        return new OtpVerifyResponse(token, user.getId(), jti.toString());
+        return new OtpVerifyResponse(token, user.getId(), jti.toString(),onboarding);
     }
 
     private static String clientIp(HttpServletRequest req) {

@@ -12,4 +12,5 @@ public class UserMeResponse {
     private String email;
     private String userType; // e.g., USER/DOCTOR
     private String status;   // if you track ACTIVE/BLOCKED/etc.
+    private OnboardingInfo onboarding;
 }

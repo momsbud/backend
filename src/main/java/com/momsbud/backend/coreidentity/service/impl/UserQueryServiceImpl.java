@@ -3,6 +3,7 @@ package com.momsbud.backend.coreidentity.service.impl;
 import com.momsbud.backend.coreidentity.dto.UserMeResponse;
 import com.momsbud.backend.coreidentity.model.User;
 import com.momsbud.backend.coreidentity.repo.UserRepository;
+import com.momsbud.backend.coreidentity.service.OnboardingService;
 import com.momsbud.backend.coreidentity.service.UserQueryService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -12,6 +13,7 @@ import org.springframework.stereotype.Service;
 public class UserQueryServiceImpl implements UserQueryService {
 
     private final UserRepository userRepository;
+    private final OnboardingService onboardingService;
 
     @Override
     public UserMeResponse getUserById(String userId) {
@@ -24,6 +26,7 @@ public class UserQueryServiceImpl implements UserQueryService {
                 .email(u.getEmail())
                 .userType(u.getUserType() != null ? u.getUserType().name() : "USER")
                 .status(u.getStatus())
+                .onboarding(onboardingService.evaluate(u.getId()))
                 .build();
     }
 
