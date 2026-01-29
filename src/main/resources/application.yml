@@ -4,15 +4,15 @@ server:
     context-path: /
   forward-headers-strategy: framework
   error:
-    include-message: always
-    include-binding-errors: always
-    include-exception: true
-    include-stacktrace: always
+    # SAFE defaults: do not leak internals by default
+    include-message: never
+    include-binding-errors: never
+    include-exception: false
+    include-stacktrace: never
 
 spring:
   application:
     name: momsbud-backend
-
 
   jpa:
     database-platform: org.hibernate.dialect.PostgreSQLDialect
@@ -22,7 +22,7 @@ spring:
     properties:
       hibernate:
         jdbc.time_zone: UTC
-        format_sql: true
+        format_sql: false
         show_sql: false
         dialect: org.hibernate.dialect.PostgreSQLDialect
 
@@ -40,7 +40,6 @@ management:
       probes:
         enabled: true
 
-
 app:
   otp:
     pepper: ${OTP_PEPPER:}
@@ -50,16 +49,15 @@ app:
     send-rate:
       per-ip-per-min: 5
       per-phone-per-hour: 6
-      
+
   sms:
-    provider: ${SMS_PROVIDER:log}  # Options: log, twilio
-    
-    # Log provider config (for development)
+    # Align with your env naming (you use APP_SMS_PROVIDER in .env)
+    provider: ${APP_SMS_PROVIDER:log}  # Options: log, twilio
+
     log:
       enabled: true
       message-template: "Your OTP code is: {code}. It expires in {ttl} minutes."
-    
-    # Twilio provider config
+
     twilio:
       account-sid: ${TWILIO_ACCOUNT_SID:}
       auth-token: ${TWILIO_AUTH_TOKEN:}
