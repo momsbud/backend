@@ -38,39 +38,39 @@ public class HabitAssignmentRefreshServiceImpl implements HabitAssignmentRefresh
     @Override
     public RefreshResult refreshForUser(String userId, String lob) {
 
-        // 1️⃣ End expired assignments first (time-based cleanup)
+        // End expired assignments first (time-based cleanup)
         cleanupService.cleanupExpiredAssignments();
 
-        // 2️⃣ Load user profile
+        // Load user profile
         var profile = userProfileRepository.findByUserId(userId)
                 .orElseThrow(() -> new IllegalStateException(
                         "UserProfile not found for userId=" + userId));
 
         Map<String, Object> metadata = profile.getMetadata();
 
-        // 3️⃣ Load active rules
+        // Load active rules
         OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
         List<HabitRule> dbRules = habitRuleRepository.findActiveForLobNow(lob, now);
 
-        // 4️⃣ Convert to engine rules
+        //  Convert to engine rules
         List<Rule> engineRules = dbRules.stream()
                 .map(this::toEngineRule)
                 .toList();
 
-        // 5️⃣ Evaluate rules
+        //  Evaluate rules
         List<Rule> matched = ruleEngine.evaluate(metadata, engineRules);
 
-        // 🔥 6️⃣ NEW: cleanup rule-mismatch assignments
+        //  NEW: cleanup rule-mismatch assignments
         cleanupService.cleanupRuleMismatchAssignments(
                 userId,
                 metadata,
                 matched
         );
 
-        // 7️⃣ Assign new habits
+        // Assign new habits
         habitAssignmentActionExecutor.execute(userId, metadata, matched);
 
-        // 8️⃣ Return summary
+        // Return summary
         long activeAssignments =
                 habitAssignmentRepository.countByUserIdAndStatusAndIsDeletedFalse(
                         userId, "ACTIVE");

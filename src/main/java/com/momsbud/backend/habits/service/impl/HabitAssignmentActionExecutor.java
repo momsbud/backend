@@ -49,7 +49,12 @@ public class HabitAssignmentActionExecutor implements ActionExecutor {
                 }
 
                 if (habitId != null && !habitId.isBlank()) {
-                    assignOne(userId, rule, habitId, ruleDedupeKey, assignedUntil, userMetadata);
+                    String perHabitDedupeKey = (ruleDedupeKey == null || ruleDedupeKey.isBlank())
+                            ? null
+                            : ruleDedupeKey + ":" + habitId;
+
+                    assignOne(userId, rule, habitId, perHabitDedupeKey, assignedUntil, userMetadata);
+
                 } else {
                     // habitTag: may resolve to multiple habits; for MVP take first or assign all
                     var habits = habitRepo.findActiveByTag(habitTag);
@@ -57,7 +62,14 @@ public class HabitAssignmentActionExecutor implements ActionExecutor {
                         continue;
                     }
                     // MVP choice: assign first match (keeps deterministic)
-                    assignOne(userId, rule, habits.get(0).getId(), deriveDedupe(ruleDedupeKey, habitTag), assignedUntil, userMetadata);
+                    String resolvedHabitId = habits.get(0).getId();
+
+                    String perHabitDedupeKey = (ruleDedupeKey == null || ruleDedupeKey.isBlank())
+                            ? deriveDedupe(null, habitTag)           // e.g. TAG:yoga
+                            : ruleDedupeKey + ":" + resolvedHabitId; // per habit
+
+                    assignOne(userId, rule, resolvedHabitId, perHabitDedupeKey, assignedUntil, userMetadata);
+
                 }
             }
         }
@@ -77,13 +89,8 @@ public class HabitAssignmentActionExecutor implements ActionExecutor {
                 .isPresent();
         if (existsByHabit) return;
 
-        // Dedupe by ACTIVE user+dedupeKey if provided
-        if (dedupeKey != null && !dedupeKey.isBlank()) {
-            boolean existsByKey = assignmentRepo
-                    .findFirstByUserIdAndDedupeKeyAndStatusAndIsDeletedFalse(userId, dedupeKey, "ACTIVE")
-                    .isPresent();
-            if (existsByKey) return;
-        }
+        // TODO: ADD Dedupe logic later  on
+
 
         var now = OffsetDateTime.now(ZoneOffset.UTC);
 
@@ -108,7 +115,7 @@ public class HabitAssignmentActionExecutor implements ActionExecutor {
 
         // ULID generation: use your existing generator (if you have a static helper) or set id yourself
         // If you already rely on @GeneratedValue(ulid) it will fill, but keeping explicit is consistent with your comment.
-        entity.setId(Ulids.newUlid()); // adjust to your actual ULID utility if different
+        // adjust to your actual ULID utility if different
 
         assignmentRepo.save(entity);
     }

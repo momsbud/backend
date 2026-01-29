@@ -11,6 +11,7 @@ import java.util.Optional;
 public interface HabitRepository extends JpaRepository<Habit, String> {
     List<Habit> findAllByUserIdAndIsDeletedFalseOrderByCreatedAtDesc(String userId);
     Optional<Habit> findByIdAndUserIdAndIsDeletedFalse(String id, String userId);
+    Optional<Habit> findByIdAndIsDeletedFalse(String id);
     @Query(value = """
         select * from habit h
         where h.is_deleted = false
@@ -19,4 +20,5 @@ public interface HabitRepository extends JpaRepository<Habit, String> {
         """, nativeQuery = true)
     List<Habit> findActiveByTag(String tag);
     List<Habit> findAllByIdInAndIsDeletedFalse(Collection<String> ids);
+
 }

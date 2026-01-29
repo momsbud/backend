@@ -89,7 +89,7 @@ public class HabitServiceImpl implements HabitService {
     @Override
     @Transactional
     public void log(String userId, String habitId, LogHabitRequest req) {
-        Habit h = habitRepo.findByIdAndUserIdAndIsDeletedFalse(habitId, userId)
+        Habit h = habitRepo.findByIdAndIsDeletedFalse(habitId)
                 .orElseThrow(() -> new NoSuchElementException("habit not found"));
 
         ZoneId zone = ZoneId.of(Optional.ofNullable(h.getTimezone()).orElse("Asia/Kolkata"));

@@ -48,21 +48,21 @@ public class OnboardingServiceImpl implements com.momsbud.backend.coreidentity.s
             missing.add("maternity.expectedDueDate|lmpDate|gestationWeek");
         }
 
-        // 3) Food preferences required (you decide schema; this checks a simple convention)
-        // Convention: metadata["FoodPreferences"] is a Map and must have "dietType"
-        Object fp = (md == null) ? null : md.get("FoodPreferences");
-        String dietType = null;
-        if (fp instanceof Map<?, ?> m) {
-            Object v = m.get("dietType");
-            if (v != null) dietType = String.valueOf(v);
-        }
-        if (dietType == null || dietType.isBlank()) {
-            missing.add("foodPreferences.dietType");
-        }
+//        // 3) Food preferences required (you decide schema; this checks a simple convention)
+//        // Convention: metadata["FoodPreferences"] is a Map and must have "dietType"
+//        Object fp = (md == null) ? null : md.get("FoodPreferences");
+//        String dietType = null;
+//        if (fp instanceof Map<?, ?> m) {
+//            Object v = m.get("dietType");
+//            if (v != null) dietType = String.valueOf(v);
+//        }
+//        if (dietType == null || dietType.isBlank()) {
+//            missing.add("foodPreferences.dietType");
+//        }
 
         OnboardingStatus status;
         if (missing.isEmpty()) status = OnboardingStatus.COMPLETED;
-        else if (missing.size() == 3) status = OnboardingStatus.NOT_STARTED;
+        else if (missing.size() == 2) status = OnboardingStatus.NOT_STARTED;
         else status = OnboardingStatus.PENDING_REQUIRED;
 
         String next = (status == OnboardingStatus.COMPLETED) ? "DASHBOARD" : "ONBOARDING";

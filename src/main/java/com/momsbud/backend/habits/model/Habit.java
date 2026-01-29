@@ -21,7 +21,7 @@ public class Habit extends BaseEntity {
     @Column(name = "user_id", nullable = false, length = 26)
     private String userId;
 
-    @Column(name = "title", nullable = false, length = 120)
+    @Column(name = "title", nullable = true, length = 120)
     private String title;
 
     @Column(name = "description", length = 500)
