@@ -19,21 +19,23 @@ jobs:
             && echo "PORT_OK" \
             || (echo "PORT_BLOCKED_OR_UNREACHABLE"; exit 1)
 
-      - name: Configure SSH key
-        env:
-          VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+      - name: Configure SSH key (base64)
         run: |
           mkdir -p ~/.ssh
-          printf "%s" "$VPS_SSH_KEY" > ~/.ssh/id_key
+          echo "${{ secrets.VPS_SSH_KEY_B64 }}" | base64 -d > ~/.ssh/id_key
           chmod 600 ~/.ssh/id_key
+          ssh-keygen -lf ~/.ssh/id_key
 
       - name: Add VPS to known_hosts
         run: |
+          mkdir -p ~/.ssh
+          ssh-keygen -R "[${{ secrets.VPS_HOST }}]:${{ secrets.VPS_PORT }}" || true
+          ssh-keygen -R "${{ secrets.VPS_HOST }}" || true
           ssh-keyscan -p ${{ secrets.VPS_PORT }} ${{ secrets.VPS_HOST }} >> ~/.ssh/known_hosts
 
       - name: SSH smoke test
         run: |
-          ssh -vvv -i ~/.ssh/id_key \
+          ssh -i ~/.ssh/id_key \
             -p ${{ secrets.VPS_PORT }} \
             -o ConnectTimeout=10 \
             -o ServerAliveInterval=30 \
