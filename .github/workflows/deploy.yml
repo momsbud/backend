@@ -9,14 +9,43 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Deploy over SSH
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ secrets.VPS_HOST }}
-          username: ${{ secrets.VPS_USER }}
-          key: ${{ secrets.VPS_SSH_KEY }}
-          port: ${{ secrets.VPS_PORT }}
-          script: |
-            set -e
-            bash /srv/momsbud/infra/deploy.sh
+      - name: TCP reachability check
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_PORT: ${{ secrets.VPS_PORT }}
+        run: |
+          echo "Checking TCP connectivity to ${VPS_HOST}:${VPS_PORT}"
+          timeout 5 bash -c "</dev/tcp/${VPS_HOST}/${VPS_PORT}" \
+            && echo "PORT_OK" \
+            || (echo "PORT_BLOCKED_OR_UNREACHABLE"; exit 1)
 
+      - name: Configure SSH key
+        env:
+          VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+        run: |
+          mkdir -p ~/.ssh
+          printf "%s" "$VPS_SSH_KEY" > ~/.ssh/id_key
+          chmod 600 ~/.ssh/id_key
+
+      - name: Add VPS to known_hosts
+        run: |
+          ssh-keyscan -p ${{ secrets.VPS_PORT }} ${{ secrets.VPS_HOST }} >> ~/.ssh/known_hosts
+
+      - name: SSH smoke test
+        run: |
+          ssh -vvv -i ~/.ssh/id_key \
+            -p ${{ secrets.VPS_PORT }} \
+            -o ConnectTimeout=10 \
+            -o ServerAliveInterval=30 \
+            -o ServerAliveCountMax=3 \
+            -o StrictHostKeyChecking=yes \
+            ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} "echo SSH_OK"
+
+      - name: Deploy
+        run: |
+          ssh -i ~/.ssh/id_key \
+            -p ${{ secrets.VPS_PORT }} \
+            -o ConnectTimeout=10 \
+            -o ServerAliveInterval=30 \
+            -o ServerAliveCountMax=3 \
+            ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} "bash /srv/momsbud/infra/deploy.sh"
