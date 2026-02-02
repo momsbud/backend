@@ -60,5 +60,23 @@ services:
       timeout: 5s
       retries: 30
 
+  caddy:
+    image: caddy:2-alpine
+    container_name: caddy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./infra/Caddyfile:/etc/caddy/Caddyfile
+      - /srv/momsbud/web:/srv/web:ro  # Mounts your static files
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      app:
+        condition: service_healthy
+
 volumes:
   pgdata:
+  caddy_data: # New volume for SSL certificates
+  caddy_config:
